@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>A small introduction to three.js webgl [1]</title>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
+    <link rel="stylesheet" href="css/basic.css">
+  
+    <script src="three.js"></script>
+    <script src="js/Detector.js"></script>
+    <script src="js/OrbitControls.js"></script>
+    <script type="text/javascript">
+      
+      // Checks that your browser supports WebGL. 
+      if ( ! Detector.webgl ) Detector.addGetWebGLMessage();
+      
+      var renderer = null; 
+      var scene    = null;
+      var camera   = null;
+      var earth = null;
+      var sun = null;
+      var moon = null;
+      var mercury = null;
+      var venus = null;
+      var mars;
+      var mercuryGroup = null;
+      var venusGroup = null;
+      var marsGroup = null;
+      var earthGroup = null;
+      var moonGroup = null;
+      var controls = null;
+      var curTime  = Date.now();
+
+      var light = null;
+      var ambientLight = null;
+
+      var cameraAngle = 1;
+      
+      // This function is called whenever the document is loaded
+      function init() {
+
+
+	  // Get display canvas
+	  var canvas = document.getElementById("webglcanvas");
+	  console.log( canvas );
+	  
+	  // Create the Three.js renderer and attach it to our canvas
+	  renderer = new THREE.WebGLRenderer( { canvas: canvas,
+						antialias: true } );
+	  // Set the viewport size
+	  renderer.setSize( canvas.width, canvas.height );
+	  // Create a new Three.js scene
+	  scene = new THREE.Scene();
+	  // Add  a camera so we can view the scene
+
+          /////////////////////////
+          // question 2.6
+          // Add background
+          var path = "images/MilkyWay/";
+          var format = '.png';
+          var urls = [
+              path + 'posx' + format, path + 'negx' + format,
+              path + 'posy' + format, path + 'negy' + format,
+              path + 'posz' + format, path + 'negz' + format
+          ];
+          var textureCube    = new THREE.CubeTextureLoader().load( urls );
+          textureCube.format = THREE.RGBFormat;
+          scene.background   = textureCube;
+
+	  camera = new THREE.PerspectiveCamera( 45, canvas.width / canvas.height,
+						1, 4000 );
+	  // Create a texture-mapped cube and add it to the scene
+	  // First, create the texture map
+	  var mapUrl = "images/earth_atmos_2048.jpg";
+	  var map    = new THREE.TextureLoader().load( mapUrl );
+
+          var mapUrlSun = "images/sun.jpg";
+          var mapSun    = new new THREE.TextureLoader().load( mapUrlSun );
+
+          var mapUrlMoon = "images/moon_1024.jpg";
+          var mapMoon    = new new THREE.TextureLoader().load( mapUrlMoon );
+
+          var mapUrlMercury = "images/mercury.jpg";
+          var mapMercury    = new new THREE.TextureLoader().load( mapUrlMercury );
+
+          var mapUrlVenus = "images/venus.jpg";
+          var mapVenus   = new new THREE.TextureLoader().load( mapUrlVenus );
+
+          var mapUrlMars = "images/mars.jpg";
+          var mapMars    = new new THREE.TextureLoader().load( mapUrlMars );
+	  
+	  // Now, create a Basic material; pass in the map
+	  var material = new THREE.MeshPhongMaterial({ map: map }); //MeshPhongMaterial
+          var materialSun = new THREE.MeshBasicMaterial({ map: mapSun });
+          var materialMoon = new THREE.MeshPhongMaterial({ map: mapMoon });
+          var materialMercury = new THREE.MeshPhongMaterial({ map: mapMercury });
+          var materialVenus = new THREE.MeshPhongMaterial({ map: mapVenus });
+          var materialMars = new THREE.MeshPhongMaterial({ map: mapMars });
+	  
+	  // Create the cube geometry
+	  var geometry = new THREE.SphereGeometry(0.2);
+          var geometrySun = new THREE.SphereGeometry(0.6);
+          var geometryMoon = new THREE.SphereGeometry(0.1);
+          var geometryMercury = new THREE.SphereGeometry(0.1);
+          var geometryVenus = new THREE.SphereGeometry(0.15);
+          var geometryMars = new THREE.SphereGeometry(0.15);
+	  
+	  // And put the geometry and material together into a mesh
+          earth = new THREE.Mesh(geometry, material);
+          sun = new THREE.Mesh(geometrySun, materialSun);
+          moon = new THREE.Mesh(geometryMoon, materialMoon);
+          mercury = new THREE.Mesh(geometryMercury, materialMercury);
+          venus = new THREE.Mesh(geometryVenus, materialVenus);
+          mars = new THREE.Mesh(geometryMars, materialMars);
+
+
+          /////////////////////////
+          // question 2.3
+          moonGroup = new THREE.Group();
+          moonGroup.add(moon);
+          earthGroup = new THREE.Group();
+          earthGroup.add(earth);
+          earthGroup.add(moonGroup);
+          mercuryGroup = new THREE.Group();
+          mercuryGroup.add(mercury);
+          venusGroup = new THREE.Group();
+          venusGroup.add(venus);
+          marsGroup = new THREE.Group();
+          marsGroup.add(mars);
+
+
+
+
+	  
+	  // Move the mesh back from the camera and tilt it toward the viewer
+          earth.position.z = -0;
+          earth.position.x = -5;
+          earth.position.z = 0;
+          earth.rotation.x = Math.PI / 5;
+          earth.rotation.y = Math.PI / 5;
+
+          moon.position.z = 0;
+          moon.position.x = -0.5;
+
+          sun.position.z = -10; // -10 parce que c'est assez loin de la camera
+
+          moonGroup.position.z = 0;
+          moonGroup.position.x = -5;
+          moonGroup.position.y = 0;
+          moonGroup.rotation.x = Math.PI / 5; //inclination of the lunar orbit
+          moonGroup.rotation.y = Math.PI / 5; //inclination of the lunar orbit
+
+
+          earthGroup.position.z = -10;
+          earthGroup.position.x = -0;
+          earthGroup.position.y = 0;
+
+          camera.position.x = 5 * Math.cos( cameraAngle );
+          camera.position.y = 3 * Math.sin( cameraAngle );
+
+
+          mercury.position.z = -0;
+          mercury.position.x = -1;
+          mercury.position.z = 0;
+
+          mercuryGroup.position.z = -10;
+          mercuryGroup.position.x = -0;
+          mercuryGroup.position.y = 0;
+
+          venus.position.z = -0;
+          venus.position.x = -3;
+          venus.position.z = 0;
+
+          venusGroup.position.z = -10;
+          venusGroup.position.x = -0;
+          venusGroup.position.y = 0;
+
+          mars.position.z = -0;
+          mars.position.x = -7;
+          mars.position.z = 0;
+
+          marsGroup.position.z = -10;
+          marsGroup.position.x = -0;
+          marsGroup.position.y = 0;
+
+
+
+
+          /////////////////////////
+          // question 2.2
+          // Add a white point light
+
+          ambientLight = new THREE.AmbientLight( 0xffffff, 0.2);
+          light = new THREE.PointLight( 0xffffff, 3);
+          light.position.set(0,0,-10);
+
+
+
+          /////////////////////////
+          // question 2.5
+          controls = new THREE.OrbitControls( camera, renderer.domElement );
+//controls.addEventListener( 'change', render ); // call this only in static scenes (i.e., if there is no animation loop)
+          controls.enableDamping = true; // an animation loop is required when either damping or auto-rotation are enabled
+          controls.dampingFactor = 0.25;
+          controls.screenSpacePanning = false;
+          controls.minDistance = 1;
+          controls.maxDistance = 20;
+
+
+          /////////////////////////
+          // question 2.7
+          renderer.shadowMap.enabled = true;
+          // rendu coûteux mais plus joli (default: THREE.PCFShadowMap)
+          renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+
+
+          light.castShadow = true;
+          // On peut aussi paramétrer la qualité du calcul
+          light.shadow.mapSize.width = 512;  // default
+          light.shadow.mapSize.height = 512; // default
+          light.shadow.camera.near = 0.5;    // default
+          light.shadow.camera.far = 50;
+
+
+          earth.castShadow = true;
+          earth.receiveShadow = true;
+          moon.castShadow = true;
+          moon.receiveShadow = true;
+
+          mercury.castShadow = true;
+          mercury.receiveShadow = true;
+          venus.castShadow = true;
+          venus.receiveShadow = true;
+          mars.castShadow = true;
+          mars.receiveShadow = true;
+
+          // Finally, add the mesh to our scene
+	  scene.add( sun,light,ambientLight,earthGroup, marsGroup, mercuryGroup, venusGroup );
+      }
+
+
+
+      
+      // This function is called regularly to update the canvas webgl.
+      function run() {
+	  // Ask to call again run 
+	  requestAnimationFrame( run );
+	  
+	  // Render the scene
+	  render();
+	  
+	  // Calls the animate function if objects or camera should move
+	  animate();
+      }
+      
+      // This function is called regularly to take care of the rendering.
+      function render() {
+	  // Render the scene
+	  renderer.render( scene, camera );
+      }
+      
+      // This function is called regularly to update objects.
+      function animate() {
+	  // Computes how time has changed since last display
+	  var now       = Date.now();
+	  var deltaTime = now - curTime;
+	  curTime       = now;
+	  var fracTime  = deltaTime / 100; // in seconds
+	  // Now we can move objects, camera, etc.
+	  // Example: rotation cube
+
+          var angle = Math.PI * 2 * fracTime; //0.1 second = 1 earth day
+          earth.rotation.y += angle;
+          sun.rotation.y += angle / 24; //solar rotation in 24.47 days
+          moon.rotation.y += angle / 28;
+          earthGroup.rotation.y += angle / 365;
+          moonGroup.rotation.y += angle /28;
+
+          mercury.rotation.y += angle * 58;
+          mercuryGroup.rotation.y += angle / 88;
+
+          venus.rotation.y += angle * 116;
+          venusGroup.rotation.y += angle / 225;
+
+          mars.rotation.y += angle; // comme la terre
+          marsGroup.rotation.y += angle / 687;
+
+
+          controls.update();
+
+
+          camera.lookAt( earth.matrixWorld.getPosition() );
+      }
+
+
+
+      
+    </script>
+  </head>
+  <body>
+    <div id="info"> a first three.js example </div>
+    <canvas id="webglcanvas" style="border: none;background-color:#000000"
+	    width="900" height="600"></canvas>
+    <!-- We run the WebGL code at the end to be sure that the document is loaded.
+      -->
+    <script>
+      init(); run();
+    </script> 
+  </body>
+</html>
+
